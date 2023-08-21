@@ -1,13 +1,24 @@
-#include "neo/framework/Common.h"
-#include "neo/idlib/lib.h"
+#include "idlib/precompiled.h"
+#include "sys/sys_public.h"
+#include "CmdSystem.h"
 
 #include <stdio.h>
 #include <string.h>
+#include <stdlib.h>
+
+#define MAX_CONSOLE_LINES 32
+int com_numConsoleLines;
+idCmdArgs com_consoleLines[MAX_CONSOLE_LINES];
 
 class idCommonLocal : public idCommon
 {
 public:
     void Init(int argc, const char** argv, const char* cmdline);
+    
+    void Error(const char* msg, ...);
+    void Warning(const char* msg, ...);
+private:
+    void ParseCommandLine(int argc, const char* const * argv);
 };
 
 idCommonLocal commonLocal;
@@ -30,6 +41,8 @@ const char* GetCmdline(int argc, const char** argv)
     return buf;
 }
 
+
+
 void idCommonLocal::Init(int argc, const char **argv, const char *cmdline)
 {
     idLib::common = common;
@@ -39,5 +52,59 @@ void idCommonLocal::Init(int argc, const char **argv, const char *cmdline)
     if (cmdline)
         printf("TODO: tokenize cmdline\n");
     
-    
+    ParseCommandLine(argc, argv);
+
+    cmdSystem->Init();
+
+    printf("QA Timing INIT: %06dms\n", Sys_Milliseconds());
+}
+
+void idCommonLocal::Error(const char *msg, ...)
+{
+    va_list argptr;
+
+    printf("ERROR: ");
+
+    va_start(argptr, msg);
+    vprintf(msg, argptr);
+    va_end(argptr);
+
+    printf("\n");
+}
+
+void idCommonLocal::Warning(const char *msg, ...)
+{
+    va_list argptr;
+
+    printf("WARN: ");
+
+    va_start(argptr, msg);
+    vprintf(msg, argptr);
+    va_end(argptr);
+
+    printf("\n");
+}
+
+void idCommonLocal::ParseCommandLine(int argc, const char *const *argv)
+{
+    int i, current_count;
+
+    com_numConsoleLines = 0;
+    current_count = 0;
+    for (i = 0; i < argc; i++)
+    {
+        if (!strcmp(argv[i], "+connect_lobby"))
+            Error("TODO: Handle Bootable invite");
+        else if (argv[i][0] == '+')
+        {
+            com_numConsoleLines++;
+            com_consoleLines[com_numConsoleLines-1].AppendArg(argv[i]+1);
+        }
+        else
+        {
+            if (!com_numConsoleLines)
+                com_numConsoleLines++;
+            com_consoleLines[com_numConsoleLines-1].AppendArg(argv[i]);
+        }
+    }
 }

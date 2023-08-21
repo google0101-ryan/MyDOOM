@@ -30,3 +30,5 @@ enum cpuid_t
 	CPUID_XENON							= 0x10000,	// Xbox 360
 	CPUID_CELL							= 0x20000	// PS3
 };
+
+int Sys_Milliseconds(void);

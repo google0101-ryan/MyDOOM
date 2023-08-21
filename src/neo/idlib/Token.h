@@ -1,5 +1,7 @@
 #pragma once
 
+#include "precompiled.h"
+
 #define TT_STRING 1
 #define TT_LITERAL 2
 #define TT_NUMBER 3
@@ -36,14 +38,31 @@ public:
     int flags;
 public:
     idToken();
+
+    void AppendDirty(const char a);
+
+    int Length() {return len;}
+
+    const char* c_str() {return data;}
+
+    char operator[](int index) const {return data[index];}
+    char& operator[](int index) {return data[index];}
 private:
     unsigned long intValue;
     double floatValue;
     const char* whiteSpaceStart_p;
     const char* whiteSpaceEnd_p;
     idToken* next;
+    char data[32];
+    int len;
 };
 
-idToken::idToken() : type(), subtype(), line(), linescrossed(), flags()
-{}
+inline idToken::idToken() : type(), subtype(), line(), linescrossed(), flags()
+{len = 0;}
 
+inline void idToken::AppendDirty(const char a)
+{
+    assert(strlen(data) < 31);
+
+    data[len++] = a;
+}
