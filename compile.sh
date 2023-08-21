@@ -1,0 +1,1 @@
+g++ src/neo/framework/*.cpp src/neo/idlib/*.cpp src/neo/idlib/math/*.cpp src/neo/sys/linux/main.cpp src/neo/sys/posix/posix_main.cpp -I./src -I./src/neo -o doom3 -lpthread

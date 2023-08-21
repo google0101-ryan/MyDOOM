@@ -1,6 +1,7 @@
 #include "idlib/precompiled.h"
 #include "sys/sys_public.h"
 #include "CmdSystem.h"
+#include "CvarSystem.h"
 
 #include <stdio.h>
 #include <string.h>
@@ -56,7 +57,13 @@ void idCommonLocal::Init(int argc, const char **argv, const char *cmdline)
 
     cmdSystem->Init();
 
+    cvarSystem->Init();
+
+    idCvar::RegisterStaticCvars();
+
     printf("QA Timing INIT: %06dms\n", Sys_Milliseconds());
+
+    printf("%s.%d%s %s %s %s\n", "D3BFG 1", 1400, "-debug", "linux-x86", __DATE__, __TIME__);
 }
 
 void idCommonLocal::Error(const char *msg, ...)

@@ -54,3 +54,47 @@ void idCmdArgs::AppendArg(const char *text)
         argc++;
     }
 }
+
+const char *idCmdArgs::Args(  int start, int end, bool escapeArgs ) const {
+	static char cmd_args[MAX_COMMAND_STRING];
+	int		i;
+
+	if ( end < 0 ) {
+		end = argc - 1;
+	} else if ( end >= argc ) {
+		end = argc - 1;
+	}
+	cmd_args[0] = '\0';
+	if ( escapeArgs ) {
+		strcat( cmd_args, "\"" );
+	}
+	for ( i = start; i <= end; i++ ) {
+		if ( i > start ) {
+			if ( escapeArgs ) {
+				strcat( cmd_args, "\" \"" );
+			} else {
+				strcat( cmd_args, " " );
+			}
+		}
+		if ( escapeArgs && strchr( argv[i], '\\' ) ) {
+			char *p = argv[i];
+			while ( *p != '\0' ) {
+				if ( *p == '\\' ) {
+					strcat( cmd_args, "\\\\" );
+				} else {
+					int l = strlen( cmd_args );
+					cmd_args[ l ] = *p;
+					cmd_args[ l+1 ] = '\0';
+				}
+				p++;
+			}
+		} else {
+			strcat( cmd_args, argv[i] );
+		}
+	}
+	if ( escapeArgs ) {
+		strcat( cmd_args, "\"" );
+	}
+
+	return cmd_args;
+}

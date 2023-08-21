@@ -34,6 +34,20 @@ public:
 									float valueMin, float valueMax);
 	idCvar( const char *name, const char *value, int flags, const char *description,
 									const char **valueStrings);
+    
+    const char* GetName() const {return internalVar->name;}
+    const char* GetValueString() const {return internalVar->value;}
+    const char* GetDescription() const {return internalVar->description;}
+
+    float GetMinValue() const {return internalVar->valueMin;}
+    float GetMaxValue() const {return internalVar->valueMax;}
+
+    int GetFlags() const {return internalVar->flags;}
+    const char** GetValueStrings() const {return valueStrings;}
+
+    void SetInternalVar(idCvar* cvar) {internalVar = cvar;}
+    
+    static void RegisterStaticCvars();
 protected:
     const char* name;
     const char* value;
@@ -71,6 +85,8 @@ inline idCvar::idCvar( const char *name, const char *value, int flags, const cha
 class idCvarSystem
 {
 public:
+    virtual void Init() = 0;
+
     virtual void Register(idCvar* cvar) = 0;
 };
 
@@ -99,4 +115,15 @@ inline void idCvar::Init(const char *name, const char *value, int flags, const c
     {
         cvarSystem->Register(this);
     }
+}
+
+inline void idCvar::RegisterStaticCvars()
+{
+    if ( staticVars != (idCvar *)0xFFFFFFFF ) 
+    {
+		for ( idCvar *cvar = staticVars; cvar; cvar = cvar->next ) {
+			cvarSystem->Register( cvar );
+		}
+		staticVars = (idCvar *)0xFFFFFFFF;
+	}
 }
