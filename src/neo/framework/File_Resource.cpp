@@ -42,8 +42,6 @@ bool idResourceContainer::Init(const char *_filename, uint8_t containerIndex)
         rt.Read(&memFile);
         rt.containerIndex = containerIndex;
 
-		printf("\tLoaded resource entry \"%s\"\n", rt.filename.c_str());
-
         cacheHash[rt.filename] = i;
     }
 
