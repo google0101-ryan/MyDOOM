@@ -3,6 +3,9 @@
 #include <stddef.h>
 #include "neo/framework/Common.h"
 
+#define	MAX_STRING_CHARS		1024
+typedef unsigned short triIndex_t;
+
 class idLib
 {
 private:

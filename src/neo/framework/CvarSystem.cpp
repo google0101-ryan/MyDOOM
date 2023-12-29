@@ -4,10 +4,17 @@
 
 #include <string>
 #include <unordered_map>
+#include <algorithm>
 
 idCvar* idCvar::staticVars = NULL;
 
 extern idCvar net_allowCheats;
+
+void to_lower(std::string& str)
+{
+    std::transform(str.begin(), str.end(), str.begin(),
+     [](unsigned char c){ return std::tolower(c); });
+}
 
 const char** CopyValueStrings(const char** strings)
 {
@@ -42,7 +49,7 @@ class idInternalCvar : public idCvar
 public:
     idInternalCvar();
 	idInternalCvar( const char *newName, const char *newValue, int newFlags );
-	idInternalCvar( const idCvar *cvar );
+	idInternalCvar( idCvar *cvar );
 
     void Set(const char* newValue, bool force, bool fromServer);
 private:
@@ -71,7 +78,7 @@ idInternalCvar::idInternalCvar( const char *newName, const char *newValue, int n
     internalVar = this;
 }
 
-idInternalCvar::idInternalCvar(const idCvar *cvar)
+idInternalCvar::idInternalCvar(idCvar *cvar)
 {
     nameString = cvar->GetName();
     name = nameString.c_str();
@@ -84,7 +91,7 @@ idInternalCvar::idInternalCvar(const idCvar *cvar)
     valueMin = cvar->GetMinValue();
     valueMax = cvar->GetMaxValue();
     valueStrings = CopyValueStrings(cvar->GetValueStrings());
-    internalVar = this;
+    internalVar = cvar;
 }
 
 void idInternalCvar::Set(const char *newValue, bool force, bool fromServer)
@@ -106,13 +113,14 @@ void idInternalCvar::Set(const char *newValue, bool force, bool fromServer)
         }
     }
 
-    if (!strcmp(valueString.c_str(), newValue))
+    if (!strcasecmp(valueString.c_str(), newValue))
     {
         return;
     }
 
     valueString = newValue;
     value = valueString.c_str();
+    internalVar->SetValue(value);
     
     flags |= CVAR_MODIFIED;
 }
@@ -127,8 +135,13 @@ public:
     void SetInternal(const char* name, const char* value, int flags);
 
     static void Set_f(const idCmdArgs& args);
+
+    void SetModifiedFlags(int flags) {modifiedFlags |= flags;}
+    void SetCvarString(const char* cvar, const char* val);
+    const char* GetCvarString(const char* cvar);
 private:
     std::unordered_map<std::string, idInternalCvar*> cvars;
+    int modifiedFlags;
 };
 
 idCvarSystemLocal cvarSystemLocal;
@@ -155,13 +168,17 @@ void idCvarSystemLocal::Register(idCvar *cvar)
     else
     {
         internal = new idInternalCvar(cvar);
+        to_lower(internal->nameString);
         cvars[internal->nameString.c_str()] = internal;
     }
 }
 
 idInternalCvar *idCvarSystemLocal::FindInternal(const char *name)
 {
-    if (cvars.find(name) == cvars.end())
+    std::string _name = name;
+    to_lower(_name);
+    
+    if (cvars.find(_name.c_str()) == cvars.end())
     {
         return NULL;
     }
@@ -183,7 +200,9 @@ void idCvarSystemLocal::SetInternal(const char *name, const char *value, int fla
     else
     {
         internal = new idInternalCvar(name, value, flags);
-        cvars[name] = internal;
+        std::string _name = name;
+        to_lower(_name);
+        cvars[_name.c_str()] = internal;
     }
 }
 
@@ -193,4 +212,43 @@ void idCvarSystemLocal::Set_f(const idCmdArgs &args)
 
     str = args.Args(2, args.Argc() - 1, false);
     cvarSystemLocal.SetInternal(args.Argv(1), str, 0);
+}
+
+extern idCvar com_allowConsole;
+
+void idCvarSystemLocal::SetCvarString(const char *cvar, const char *val)
+{
+    idInternalCvar* internal;
+
+    internal = FindInternal(cvar);
+
+    if (internal)
+    {
+        internal->Set(val, true, false);
+    }
+    else
+    {
+        printf("Making new cvar\n");
+        internal = new idInternalCvar(cvar, val, 0);
+        std::string _name = cvar;
+        to_lower(_name);
+        cvars[_name.c_str()] = internal;
+    }
+}
+
+const char *idCvarSystemLocal::GetCvarString(const char *cvar)
+{
+    idInternalCvar* internal;
+
+    internal = FindInternal(cvar);
+
+    if (internal)
+    {
+        return internal->GetValueString();
+    }
+    else
+    {
+        common->Warning("Tried to read non-existant cvar!\n");
+        return "";
+    }
 }

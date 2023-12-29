@@ -1,5 +1,11 @@
 #pragma once
 
+#include <cstdio>
+#include <cassert>
+#include <cstdint>
+
+#include "sys_threading.h"
+
 typedef struct
 {
     const char* name;
@@ -7,8 +13,7 @@ typedef struct
     unsigned long threadId;
 } xthreadInfo;
 
-const int MAX_THREADS = 10;
-extern xthreadInfo* g_threads[MAX_THREADS];
+extern xthreadInfo* g_threads[10];
 
 enum cpuid_t 
 {
@@ -32,3 +37,44 @@ enum cpuid_t
 };
 
 int Sys_Milliseconds(void);
+
+void Sys_InitNetworking();
+
+void Sys_SignalCreate(signalHandle_t& handle, bool manualReset);
+void Sys_SignalDestroy(signalHandle_t& handle);
+void Sys_SignalRaise(signalHandle_t& handle);
+void Sys_SignalClear(signalHandle_t& handle);
+bool Sys_SignalWait(signalHandle_t& handle, int timeout);
+
+void Sys_MutexCreate(mutexHandle_t& handle);
+void Sys_MutexDestroy(mutexHandle_t& handle);
+bool Sys_MutexLock(mutexHandle_t& handle, bool blocking);
+void Sys_MutexUnlock(mutexHandle_t& handle);
+
+void Sys_DestroyThread(uintptr_t threadHandle);
+uintptr_t Sys_CreateThread( xthread_t function, void* parms, xthreadPriority priority,
+									  const char* name, core_t core, int stackSize = DEFAULT_THREAD_STACK_SIZE,
+									  bool suspended = false );
+
+typedef FILE* idFileHandle;
+
+enum sysEventType_t
+{
+	SE_NONE,				// evTime is still valid
+	SE_KEY,					// evValue is a key code, evValue2 is the down flag
+	SE_CHAR,				// evValue is an Unicode UTF-32 char (or non-surrogate UTF-16)
+	SE_MOUSE,				// evValue and evValue2 are relative signed x / y moves
+	SE_MOUSE_ABSOLUTE,		// evValue and evValue2 are absolute coordinates in the window's client area.
+	SE_MOUSE_LEAVE,			// evValue and evValue2 are meaninless, this indicates the mouse has left the client area.
+	SE_JOYSTICK,			// evValue is an axis number and evValue2 is the current state (-127 to 127)
+	SE_CONSOLE				// evPtr is a char*, from typing something at a non-game console
+};
+
+struct sysEvent_t
+{
+	sysEventType_t evType;
+	int evValue;
+	int evValue2;
+	int evPtrLength;
+	void* evPtr;
+};

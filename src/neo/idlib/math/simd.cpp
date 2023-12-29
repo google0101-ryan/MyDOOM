@@ -12,3 +12,25 @@ void idSimd::Init()
     processor = nullptr;
     simdProcessor = generic;
 }
+
+void idSimd::InitProcessor(const char *module, bool forceGeneric)
+{
+    cpuid_t cpuid;
+    idSimdProcessor* newProcessor;
+
+    cpuid = CPUID_GENERIC;
+
+    if (forceGeneric)
+    {
+        newProcessor = generic;
+    }
+    else
+    {
+        if (processor == nullptr)
+        {
+            processor = generic;
+            processor->cpuid = cpuid;
+        }
+        newProcessor = processor;
+    }
+}

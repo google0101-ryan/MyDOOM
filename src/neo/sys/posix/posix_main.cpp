@@ -24,7 +24,7 @@ static termios tty_tc;
 
 xthreadInfo asyncThread;
 
-xthreadInfo* g_threads[MAX_THREADS];
+xthreadInfo* g_threads[10];
 
 const int MAX_LOCAL_CRITICAL_SECTIONS = 5;
 static pthread_mutex_t global_lock[ MAX_LOCAL_CRITICAL_SECTIONS ];
@@ -53,7 +53,7 @@ void Posix_InitPThreads( ) {
 	}
 
 	// init threads table
-	for ( i = 0; i < MAX_THREADS; i++ ) {
+	for ( i = 0; i < 10; i++ ) {
 		g_threads[ i ] = NULL;
 	}	
 }

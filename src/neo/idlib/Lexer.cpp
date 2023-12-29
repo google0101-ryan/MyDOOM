@@ -1,9 +1,92 @@
 #include "Lexer.h"
 #include "lib.h"
 
+punctuation_t default_punctuations[] = {
+	//binary operators
+	{">>=",P_RSHIFT_ASSIGN},
+	{"<<=",P_LSHIFT_ASSIGN},
+	//
+	{"...",P_PARMS},
+	//define merge operator
+	{"##",P_PRECOMPMERGE},				// pre-compiler
+	//logic operators
+	{"&&",P_LOGIC_AND},					// pre-compiler
+	{"||",P_LOGIC_OR},					// pre-compiler
+	{">=",P_LOGIC_GEQ},					// pre-compiler
+	{"<=",P_LOGIC_LEQ},					// pre-compiler
+	{"==",P_LOGIC_EQ},					// pre-compiler
+	{"!=",P_LOGIC_UNEQ},				// pre-compiler
+	//arithmatic operators
+	{"*=",P_MUL_ASSIGN},
+	{"/=",P_DIV_ASSIGN},
+	{"%=",P_MOD_ASSIGN},
+	{"+=",P_ADD_ASSIGN},
+	{"-=",P_SUB_ASSIGN},
+	{"++",P_INC},
+	{"--",P_DEC},
+	//binary operators
+	{"&=",P_BIN_AND_ASSIGN},
+	{"|=",P_BIN_OR_ASSIGN},
+	{"^=",P_BIN_XOR_ASSIGN},
+	{">>",P_RSHIFT},					// pre-compiler
+	{"<<",P_LSHIFT},					// pre-compiler
+	//reference operators
+	{"->",P_POINTERREF},
+	//C++
+	{"::",P_CPP1},
+	{".*",P_CPP2},
+	//arithmatic operators
+	{"*",P_MUL},						// pre-compiler
+	{"/",P_DIV},						// pre-compiler
+	{"%",P_MOD},						// pre-compiler
+	{"+",P_ADD},						// pre-compiler
+	{"-",P_SUB},						// pre-compiler
+	{"=",P_ASSIGN},
+	//binary operators
+	{"&",P_BIN_AND},					// pre-compiler
+	{"|",P_BIN_OR},						// pre-compiler
+	{"^",P_BIN_XOR},					// pre-compiler
+	{"~",P_BIN_NOT},					// pre-compiler
+	//logic operators
+	{"!",P_LOGIC_NOT},					// pre-compiler
+	{">",P_LOGIC_GREATER},				// pre-compiler
+	{"<",P_LOGIC_LESS},					// pre-compiler
+	//reference operator
+	{".",P_REF},
+	//seperators
+	{",",P_COMMA},						// pre-compiler
+	{";",P_SEMICOLON},
+	//label indication
+	{":",P_COLON},						// pre-compiler
+	//if statement
+	{"?",P_QUESTIONMARK},				// pre-compiler
+	//embracements
+	{"(",P_PARENTHESESOPEN},			// pre-compiler
+	{")",P_PARENTHESESCLOSE},			// pre-compiler
+	{"{",P_BRACEOPEN},					// pre-compiler
+	{"}",P_BRACECLOSE},					// pre-compiler
+	{"[",P_SQBRACKETOPEN},
+	{"]",P_SQBRACKETCLOSE},
+	//
+	{"\\",P_BACKSLASH},
+	//precompiler operator
+	{"#",P_PRECOMP},					// pre-compiler
+	{"$",P_DOLLAR},
+	{NULL, 0}
+};
+
 idLexer::idLexer()
 {
     idLexer::loaded = false;
+    idLexer::punctuations = default_punctuations;
+}
+
+idLexer::idLexer(const char * ptr, int length, const char * name, int flags)
+{
+    idLexer::loaded = false;
+    idLexer::flags = flags;
+    idLexer::LoadMemory(ptr, length, name);
+    idLexer::punctuations = default_punctuations;
 }
 
 int idLexer::LoadMemory(const char *ptr, int length, const char *name, int startline)
@@ -216,9 +299,9 @@ int idLexer::ReadToken(idToken *token)
 			return 0;
 		}
     }
-    else
+    else if (!idLexer::ReadPunctuation(token))
     {
-        idLexer::Error("TODO: Punctuation");
+        common->Error("unknown punctuation %c", c);
         return 0;
     }
 
@@ -694,6 +777,70 @@ int idLexer::ReadNumber(idToken *token)
 	}
 	token->data[token->len] = '\0';
 	return 1;
+}
+
+int idLexer::ReadPunctuation(idToken * token)
+{
+    int l, n, i;
+    const char* p;
+    const punctuation_t* punc;
+
+    for (i = 0; idLexer::punctuations[i].p; i++)
+    {
+        punc = &idLexer::punctuations[i];
+        p = punc->p;
+
+        for (l = 0; p[l] && idLexer::script_p[l]; l++)
+            if (idLexer::script_p[l] != p[l])
+                break;
+    
+        if (!p[l])
+        {
+            for (i = 0; i <= l; i++)
+                token->data[i] = p[i];
+            token->len = l;
+            idLexer::script_p += l;
+            token->type = TT_PUNCTUTATION;
+            token->subtype = punc->n;
+            return 1;
+        }
+    }
+
+    return 0;
+}
+
+int idLexer::ExpectTokenString(std::string str)
+{
+    idToken token;
+
+    if (!idLexer::ReadToken(&token))
+    {
+        idLexer::Error("Couldn't find expected '%s'", str.c_str());
+        return 0;
+    }
+
+    if (token.c_str() != str)
+    {
+        idLexer::Error("Couldn't find expected '%s'", str.c_str());
+        return 0;
+    }
+
+    return 1;
+}
+
+int idLexer::CheckTokenString(std::string string)
+{
+    idToken tok;
+
+    if (!ReadToken(&tok))
+        return 0;
+    
+    if (tok.c_str() == string)
+        return 1;
+    
+    script_p = lastScript_p;
+    line = lastline;
+    return 0;
 }
 
 void idLexer::Warning(const char *str, ...)

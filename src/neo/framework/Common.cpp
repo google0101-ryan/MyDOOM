@@ -2,6 +2,12 @@
 #include "sys/sys_public.h"
 #include "CmdSystem.h"
 #include "CvarSystem.h"
+#include "KeyInput.h"
+#include "Filesystem.h"
+#include "DeclManager.h"
+#include "EventLoop.h"
+#include "idlib/ParallelJobList.h"
+#include "../renderer/RenderSystem.h"
 
 #include <stdio.h>
 #include <string.h>
@@ -18,12 +24,19 @@ public:
     
     void Error(const char* msg, ...);
     void Warning(const char* msg, ...);
+
+    void StartupVariable(const char* match);
 private:
     void ParseCommandLine(int argc, const char* const * argv);
+
+    bool consoleUsed = false;
 };
 
 idCommonLocal commonLocal;
 idCommon* common = (idCommon*)&commonLocal;
+
+idCvar com_allowConsole("com_allowConsole", "0", CVAR_BOOL | CVAR_SYSTEM | CVAR_INIT, "allow toggling console with the tilde key");
+idCvar com_forceGenericSIMD("com_forceGenericSIMD", "0", CVAR_BOOL | CVAR_SYSTEM | CVAR_NOCHEAT, "force generic platform independent SIMD");
 
 const char* GetCmdline(int argc, const char** argv)
 {
@@ -42,7 +55,25 @@ const char* GetCmdline(int argc, const char** argv)
     return buf;
 }
 
+void idCommonLocal::StartupVariable(const char* match)
+{
+    int i = 0;
+    while (i < com_numConsoleLines)
+    {
+        if (strcmp(com_consoleLines[i].Argv(0), "set") != 0)
+        {
+            i++;
+            continue;
+        }
+        const char* s = com_consoleLines[i].Argv(1);
 
+        if (!match || !strcasecmp(s, match))
+        {
+            cvarSystem->SetCvarString(s, com_consoleLines[i].Argv(2));
+        }
+        i++;
+    }
+}
 
 void idCommonLocal::Init(int argc, const char **argv, const char *cmdline)
 {
@@ -64,6 +95,34 @@ void idCommonLocal::Init(int argc, const char **argv, const char *cmdline)
     printf("QA Timing INIT: %06dms\n", Sys_Milliseconds());
 
     printf("%s.%d%s %s %s %s\n", "D3BFG 1", 1400, "-debug", "linux-x86", __DATE__, __TIME__);
+
+    idKeyInput::Init();
+
+    Sys_InitNetworking();
+
+    StartupVariable(NULL);
+    
+    consoleUsed = com_allowConsole.GetIntegerValue();
+
+    idSimd::InitProcessor("doom", com_forceGenericSIMD.GetIntegerValue());
+
+    fileSystem->Init();
+
+    declManager->Init();
+
+    eventLoop->Init();
+
+    parallelJobManager->Init();
+
+    renderSystem->Init();
+
+	const idMaterial* splashScreen = declManager->FindMaterial("guis/assets/splash/legal_english");
+
+	
+
+    printf("--- Common Initialization Complete ---\n");
+
+    printf("QA Timing IIS: %06dms\n", Sys_Milliseconds());
 }
 
 void idCommonLocal::Error(const char *msg, ...)
@@ -77,6 +136,8 @@ void idCommonLocal::Error(const char *msg, ...)
     va_end(argptr);
 
     printf("\n");
+
+    exit(1);
 }
 
 void idCommonLocal::Warning(const char *msg, ...)

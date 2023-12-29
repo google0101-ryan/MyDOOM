@@ -1,6 +1,8 @@
 #pragma once
 
 #include "idlib/precompiled.h"
+#include <stdlib.h>
+#include <string.h>
 
 typedef enum 
 {
@@ -27,6 +29,7 @@ typedef enum
 
 class idCvar
 {
+    friend class idCvarSystemLocal;
 public:
     idCvar() {}
     idCvar( const char *name, const char *value, int flags, const char *description);
@@ -41,6 +44,7 @@ public:
 
     float GetMinValue() const {return internalVar->valueMin;}
     float GetMaxValue() const {return internalVar->valueMax;}
+    int GetIntegerValue() const {return integerValue;}
 
     int GetFlags() const {return internalVar->flags;}
     const char** GetValueStrings() const {return valueStrings;}
@@ -48,6 +52,8 @@ public:
     void SetInternalVar(idCvar* cvar) {internalVar = cvar;}
     
     static void RegisterStaticCvars();
+
+    void SetValue(const char* val) {value = val; integerValue = atoi(value);}
 protected:
     const char* name;
     const char* value;
@@ -88,6 +94,10 @@ public:
     virtual void Init() = 0;
 
     virtual void Register(idCvar* cvar) = 0;
+    virtual void SetModifiedFlags(int flags) = 0;
+
+    virtual void SetCvarString(const char* cvar, const char* val) = 0;
+    virtual const char* GetCvarString(const char* cvar) = 0;
 };
 
 extern idCvarSystem* cvarSystem;
